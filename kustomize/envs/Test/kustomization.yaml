@@ -35,7 +35,7 @@ patches:
     path: octopub-frontend-deployment.yaml
 
 secretGenerator:
-  - name: database-credentials
+  - name: octopub-database-credentials
     behavior: merge
     envs:
     - secrets.properties

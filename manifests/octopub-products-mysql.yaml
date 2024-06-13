@@ -22,7 +22,7 @@ spec:
             - name: DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: database-credentials
+                  name: octopub-database-credentials
                   key: database-password
             - name: DATABASE_HOSTNAME
               value: "192.168.1.64"
@@ -33,7 +33,7 @@ spec:
             - name: DATABASE_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: database-credentials
+                  name: octopub-database-credentials
                   key: database-user
             - name: MIGRATE_AT_START
               value: "false"

@@ -8,7 +8,7 @@ resources:
 - octopub-products-mysql.yaml
 
 secretGenerator:
-  - name: database-credentials
+  - name: octopub-database-credentials
     envs:
     - secrets.properties
 
