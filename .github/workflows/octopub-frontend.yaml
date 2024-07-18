@@ -1,0 +1,29 @@
+name: Build Frontend
+permissions:
+  contents: write
+  packages: write
+on:
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build Javascript Frontend
+        uses: ./github/js-frontend
+        with:
+          run_number: ${{ github.run_number }}
+          dockerhub_username: ${{ secrets.DOCKER_USERNAME }}
+          dockerhub_password: ${{ secrets.DOCKER_PASSWORD }}
+          github_codefresh_token: ${{ secrets.CF_GITHUB_TOKEN }}
+          codefresh_token: ${{ secrets.CF_API_KEY }}
+          octopus_server_url: ${{ secrets.OCTOPUS_SERVER_URL }}
+          octopus_api_key: ${{ secrets.OCTOPUS_API_KEY }}
+          octopus_space: ${{ secrets.OCTOPUS_SPACE }}          

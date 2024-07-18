@@ -21,12 +21,12 @@ runs:
   using: "composite"
   steps:
     - name: Clone code repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - uses: chrisdickinson/setup-yq@latest
 
     - name: Install GitVersion
-      uses: gittools/actions/gitversion/setup@v0.9.15
+      uses: gittools/actions/gitversion/setup@v1.2.0
       with:
         versionSpec: 5.x
 

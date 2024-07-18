@@ -28,6 +28,7 @@ spec:
       containers:
         - name: auditservice
           image: octopussamples/octopub-audit-microservice-mysql
+          #image: ghcr.io/octopussolutionsengineering/octopub-audit-microservice-mysql
           ports:
             - name: http-audit
               containerPort: 10000

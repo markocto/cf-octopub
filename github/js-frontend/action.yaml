@@ -4,73 +4,22 @@ inputs:
   run_number:
     required: true
     description: The GitHub Actions Workflow run number
-  aws_access_key:
-    description: 'The aws access key'
-    required: true
-  aws_secret_access_key:
-    description: 'The aws secret access key'
-    required: true
-  octopus_url:
-    description: 'The octopus server'
-    required: true
-  octopus_apikey:
-    description: 'The octopus apikey'
-    required: true
   dockerhub_username:
     description: 'The dockerhub username'
     required: true
   dockerhub_password:
     description: 'The dockerhub password'
     required: true
+  codefresh_token:
+    description: 'The codefresh token'
+    required: true
+  github_codefresh_token:
+    description: 'The github codefresh token'
+    required: true    
 
 runs:
   using: "composite"
   steps:
-    # These are the dependencies that need to be manually installed to support https://github.com/ehsaniara/maven-repository-aws-s3
-    - name: Install maven-repository-aws-s3 dependencies
-      run: |
-        HOME=$(dirname $(readlink -f $(which mvn)))
-        for dep in "com.github.ehsaniara:maven-repository-aws-s3:1.2.11:jar" "org.apache.httpcomponents:httpcore:4.4.16:jar" "com.amazonaws:aws-java-sdk-s3:1.12.405:jar" "com.amazonaws:aws-java-sdk-core:1.12.405:jar" "com.fasterxml.jackson.core:jackson-core:2.14.2:jar" "com.fasterxml.jackson.core:jackson-databind:2.14.2:jar" "com.fasterxml.jackson.core:jackson-annotations:2.14.2:jar" "joda-time:joda-time:2.12.2:jar" "org.apache.httpcomponents:httpclient:4.5.14:jar" "commons-io:commons-io:2.12.0"
-        do
-           split=(${dep//:/ })
-           mvn dependency:get \
-            --batch-mode \
-            -DrepoUrl=https://repo.maven.apache.org/maven2 \
-            -Dartifact=${dep} \
-            -Ddest=${HOME}/../lib/${split[0]}.${split[1]}.jar
-        done
-      shell: bash
-      working-directory: java
-
-    - name: Configure maven-repository-aws-s3
-      run: |
-        cat <<EOT > ~/.m2/settings.xml
-        <settings>
-          <servers>
-            <server>
-              <id>octopus-sales-public-snapshot</id>
-              <username>${{ inputs.aws_access_key }}</username>
-              <password>${{ inputs.aws_secret_access_key }}</password>
-              <configuration>
-                <region>ap-southeast-2</region>
-                <publicRepository>true</publicRepository>
-              </configuration>
-            </server>
-            <server>
-              <id>octopus-sales-public-release</id>
-              <username>${{ inputs.aws_access_key }}</username>
-              <password>${{ inputs.aws_secret_access_key }}</password>
-              <configuration>
-                <region>ap-southeast-2</region>
-                <publicRepository>true</publicRepository>
-              </configuration>
-            </server>
-          </servers>
-        </settings>
-        EOT
-      shell: bash
-      working-directory: java
-
     - name: Login to DockerHub
       uses: docker/login-action@v2
       with:
@@ -78,7 +27,7 @@ runs:
         password: ${{ inputs.dockerhub_password }}
 
     - name: Clone code repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - uses: actions/setup-node@v3
       with:
@@ -86,17 +35,12 @@ runs:
         cache: 'npm'
         cache-dependency-path: js/frontend/yarn.lock
 
-    - name: Install Octopus CLI 🐙
-      uses: OctopusDeploy/install-octopus-cli-action@v3
-      with:
-        version: 'latest'
-
     - name: Get branch name
       id: branch-name
       uses: tj-actions/branch-names@v7
 
     - name: Install GitVersion
-      uses: gittools/actions/gitversion/setup@v0.9.15
+      uses: gittools/actions/gitversion/setup@v1.2.0
       with:
         versionSpec: 5.x
 
@@ -105,7 +49,6 @@ runs:
       uses: gittools/actions/gitversion/execute@v0.9.15
       with:
         additionalArguments: /overrideconfig mode=Mainline
-
     - name: Install modules
       run: yarn install
       shell: bash
@@ -122,33 +65,6 @@ runs:
       shell: bash
       working-directory: js/frontend
 
-    # We capture the SBOM, which is found in the file bom.xml, as a versioned ZIP package.
-    - name: Build SBOM package
-      env:
-        OCTOPUS_URL: ${{ inputs.octopus_url }}
-        OCTOPUS_API_KEY: ${{ inputs.octopus_apikey }}
-      run: >
-        octopus package zip create
-        --id javascript-frontend-sbom
-        --version ${{ steps.determine_version.outputs.semVer }}
-        --include **/bom.json
-      shell: bash
-      working-directory: js/frontend
-
-    # The SBOM package is pushed to the sales maven feed
-    - name: Push SBOM Package
-      run: |       
-        mvn deploy:deploy-file \
-          --batch-mode \
-          "-DgroupId=com.octopus" \
-          "-DartifactId=octopub-frontend-sbom" \
-          "-Dversion=${{ steps.determine_version.outputs.semVer }}" \
-          "-Dpackaging=zip" \
-          "-Dfile=js/frontend/javascript-frontend-sbom.${{ steps.determine_version.outputs.semVer }}.zip" \
-          "-DrepositoryId=octopus-sales-public-snapshot" \
-          "-Durl=s3://octopus-sales-public-maven-repo/snapshot"
-      shell: bash
-
     - name: Set version
       run: |
         jq '.frontendVersion = "v${{ steps.determine_version.outputs.semVer }}"' config.json > /tmp/config.json
@@ -161,77 +77,60 @@ runs:
       shell: bash
       working-directory: js/frontend
 
-    - name: Build and deploy serverless package
-      run: |
-        pushd js/frontend
-        zip -r octopub-frontend.${{ steps.determine_version.outputs.semVer }}.zip serverless.yaml build public/config.json.dot
-        popd
-        mvn deploy:deploy-file \
-          --batch-mode \
-          "-DgroupId=com.octopus" \
-          "-DartifactId=octopub-frontend-serverless" \
-          "-Dversion=${{ steps.determine_version.outputs.semVer }}" \
-          "-Dpackaging=zip" \
-          "-Dfile=js/frontend/octopub-frontend.${{ steps.determine_version.outputs.semVer }}.zip" \
-          "-DrepositoryId=octopus-sales-public-snapshot" \
-          "-Durl=s3://octopus-sales-public-maven-repo/snapshot"
-      shell: bash
-
     # The Docker image is built and pushed.
-    - name: Build, tag, and push image to Dockerhub
+    - name: Build, tag, and push image to DockerHub
       run: |
-        docker build -t octopussamples/octopub-frontend:${{ steps.determine_version.outputs.semVer }} .
-        docker push octopussamples/octopub-frontend:${{ steps.determine_version.outputs.semVer }}
-        docker tag  octopussamples/octopub-frontend:${{ steps.determine_version.outputs.semVer }} octopussamples/octopub-frontend:latest
-        docker push octopussamples/octopub-frontend:latest
+        docker build -t harrisonmeister/cf-octopub-frontend:${{ steps.determine_version.outputs.semVer }} .
+        docker push harrisonmeister/cf-octopub-frontend:${{ steps.determine_version.outputs.semVer }}
+        docker tag  harrisonmeister/cf-octopub-frontend:${{ steps.determine_version.outputs.semVer }} harrisonmeister/cf-octopub-frontend:latest
+        docker push harrisonmeister/cf-octopub-frontend:latest
       shell: bash
       working-directory: js/frontend
-
-    - name: Build and push static web package
-      run: |
-        pushd js/frontend/build
-        zip -r ../octopub-frontend.${{ steps.determine_version.outputs.semVer }}.zip .
-        popd
-        
-        mvn deploy:deploy-file \
-          --batch-mode \
-          "-DgroupId=com.octopus" \
-          "-DartifactId=octopub-frontend" \
-          "-Dversion=${{ steps.determine_version.outputs.semVer }}" \
-          "-Dpackaging=zip" \
-          "-Dfile=js/frontend/octopub-frontend.${{ steps.determine_version.outputs.semVer }}.zip" \
-          "-DrepositoryId=octopus-sales-public-snapshot" \
-          "-Durl=s3://octopus-sales-public-maven-repo/snapshot"
-      shell: bash
 
     - name: Install Cypress modules
       run: npm install
       shell: bash
       working-directory: js/cypress-frontend
 
-    # End-to-end tests are performed with Cypress.
-    - name: Build Cypress package
-      env:
-        OCTOPUS_URL: ${{ inputs.octopus_url }}
-        OCTOPUS_API_KEY: ${{ inputs.octopus_apikey }}
-      run: >
-        octopus package zip create
-        --id octopub-frontend-cypress
-        --version ${{ steps.determine_version.outputs.semVer }}
-        --out-folder ..
-      shell: bash
-      working-directory: js/cypress-frontend
+    - name: report image by action
+      with:
+        # Name of runtime to implement the enrichment
+        CF_RUNTIME_NAME: 'local-k3s-gitops-runtime'
 
-    # The Cypress package is pushed to the sales maven feed.
-    - name: Push Cypress Package
-      run: |
-        mvn deploy:deploy-file \
-          --batch-mode \
-          "-DgroupId=com.octopus" \
-          "-DartifactId=octopub-frontend-cypress" \
-          "-Dversion=${{ steps.determine_version.outputs.semVer }}" \
-          "-Dpackaging=zip" \
-          "-Dfile=js/octopub-frontend-cypress.${{ steps.determine_version.outputs.semVer }}.zip" \
-          "-DrepositoryId=octopus-sales-public-snapshot" \
-          "-Durl=s3://octopus-sales-public-maven-repo/snapshot"
-      shell: bash
+        # Codefresh API key !! Committing a plain text token is a security risk. We highly recommend using encrypted secrets. !!
+        # Documentation - https://docs.github.com/en/actions/security-guides/encrypted-secrets
+        CF_API_KEY: ${{ inputs.codefresh_token }}
+
+        # Name of Container registry integration
+        CF_CONTAINER_REGISTRY_INTEGRATION: 'dockerhub-harrisonmeister'
+
+        # The git branch which is related for the commit
+        CF_GIT_BRANCH: ${{ github.ref_name }}
+
+        # Image path to enrich 
+        CF_IMAGE: docker.io/${{ inputs.dockerhub_username }}/octopub-frontend:${{ steps.determine_version.outputs.semVer }}
+
+        # GitHub Access token !! Committing a plain text token is a security risk. We highly recommend using encrypted secrets. !!
+        # Documentation - https://docs.github.com/en/actions/security-guides/encrypted-secrets
+        CF_GITHUB_TOKEN: ${{ inputs.github_codefresh_token }}    
+
+        # # Name of Jira integration
+        # # Name of Jira integration
+        CF_ISSUE_TRACKING_INTEGRATION: 'jira-markharrison' 
+
+        # # String starting with the issue ID to associate with image
+        CF_JIRA_MESSAGE: 'OC-1'
+
+        # # Jira project filter
+        CF_JIRA_PROJECT_PREFIX: "OC"
+      uses: codefresh-io/codefresh-report-image@latest
+
+    - name: Push build information to Octopus Deploy 🐙
+      uses: OctopusDeploy/push-build-information-action@v3
+      with:
+        packages: |
+          harrisonmeister/cf-octopub-frontend
+        version: ${{ steps.determine_version.outputs.semVer }}
+        server: ${{ inputs.octopus_server_url }}
+        api_Key: ${{ inputs.octopus_api_key }}
+        space: ${{ inputs.octopus_space }}      
