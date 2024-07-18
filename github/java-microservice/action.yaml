@@ -95,7 +95,7 @@ runs:
         username: ${{ inputs.dockerhub_username }}
         password: ${{ inputs.dockerhub_password }}
 
-    - uses: graalvm/setup-graalvm@v1@4.0
+    - uses: graalvm/setup-graalvm@v1.2.0
       with:
         graalvm: '22.3.2'
         java: 'java17'

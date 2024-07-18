@@ -48,7 +48,7 @@ runs:
         distribution: adopt
         cache: 'maven'
 
-    - uses: graalvm/setup-graalvm@v1
+    - uses: graalvm/setup-graalvm@v1.2.0
       with:
         java-version: '17'
         distribution: 'graalvm'
