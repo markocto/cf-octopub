@@ -97,7 +97,6 @@ runs:
 
     - uses: graalvm/setup-graalvm@v1.2.0
       with:
-      with:
         java-version: '17'
         distribution: 'graalvm'
 
