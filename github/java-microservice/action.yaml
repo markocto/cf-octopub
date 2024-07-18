@@ -65,7 +65,8 @@ runs:
   steps:
     - name: Clone code repo
       uses: actions/checkout@v4
-
+      with:
+        fetch-depth: 0
     - name: Get branch name
       id: branch-name
       uses: tj-actions/branch-names@v7
@@ -77,7 +78,7 @@ runs:
 
     - id: determine_version
       name: Determine Version
-      uses: gittools/actions/gitversion/execute@v0.9.15
+      uses: gittools/actions/gitversion/execute@v1.2.0
       with:
         additionalArguments: /overrideconfig mode=Mainline
 
