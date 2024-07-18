@@ -4,9 +4,9 @@ permissions:
   packages: write
 on:
   workflow_dispatch:
-  # push:
-  #   branches:
-  #     - main
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -26,4 +26,4 @@ jobs:
           codefresh_token: ${{ secrets.CF_API_KEY }}
           octopus_server_url: ${{ vars.OCTOPUS_SERVER_URL }}
           octopus_api_key: ${{ secrets.OCTOPUS_API_KEY }}
-          octopus_space: ${{ secrets.OCTOPUS_SPACE }}          
+          octopus_space: ${{ vars.OCTOPUS_SPACE }}          
