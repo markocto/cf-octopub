@@ -25,7 +25,7 @@ spec:
                   name: octopub-database-credentials
                   key: database-password
             - name: DATABASE_HOSTNAME
-              value: "db01.harrisonmeister"
+              value: "db01.markocto"
             - name: DATABASE_PORT
               value: "3306"
             - name: DATABASE_NAME

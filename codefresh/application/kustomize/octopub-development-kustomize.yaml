@@ -7,7 +7,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/harrisonmeister/cf-octopub.git
+    repoURL: https://github.com/markocto/cf-octopub.git
     targetRevision: HEAD
     path: codefresh/kustomize/envs/Development
   destination:

@@ -150,10 +150,10 @@ runs:
     - name: Build, tag, and push image to DockerHub
       if: ${{ inputs.docker_build == 'true' }}
       run: |
-        docker build -f src/main/docker/Dockerfile.legacy-jar -t harrisonmeister/cf-octopub-${{ inputs.service_directory }}-mysql:${{ steps.determine_version.outputs.semVer }} .
-        docker push harrisonmeister/cf-octopub-${{ inputs.service_directory }}-mysql:${{ steps.determine_version.outputs.semVer }}
-        docker tag  harrisonmeister/cf-octopub-${{ inputs.service_directory }}-mysql:${{ steps.determine_version.outputs.semVer }} harrisonmeister/cf-octopub-${{ inputs.service_directory }}-mysql:latest
-        docker push harrisonmeister/cf-octopub-${{ inputs.service_directory }}-mysql:latest
+        docker build -f src/main/docker/Dockerfile.legacy-jar -t markocto/cf-octopub-${{ inputs.service_directory }}-mysql:${{ steps.determine_version.outputs.semVer }} .
+        docker push markocto/cf-octopub-${{ inputs.service_directory }}-mysql:${{ steps.determine_version.outputs.semVer }}
+        docker tag  markocto/cf-octopub-${{ inputs.service_directory }}-mysql:${{ steps.determine_version.outputs.semVer }} markocto/cf-octopub-${{ inputs.service_directory }}-mysql:latest
+        docker push markocto/cf-octopub-${{ inputs.service_directory }}-mysql:latest
       shell: bash
       working-directory: java/${{ inputs.service_directory }}
 
@@ -167,7 +167,7 @@ runs:
         CF_API_KEY: ${{ inputs.codefresh_token }}
 
         # Name of Container registry integration
-        CF_CONTAINER_REGISTRY_INTEGRATION: 'dockerhub-harrisonmeister'
+        CF_CONTAINER_REGISTRY_INTEGRATION: 'dockerhub-markocto'
 
         # The git branch which is related for the commit
         CF_GIT_BRANCH: ${{ github.ref_name }}
@@ -193,7 +193,7 @@ runs:
       uses: OctopusDeploy/push-build-information-action@v3
       with:
         packages: |
-          harrisonmeister/cf-octopub-${{ inputs.service_directory }}-mysql
+          markocto/cf-octopub-${{ inputs.service_directory }}-mysql
         version: ${{ steps.determine_version.outputs.semVer }}
         server: ${{ inputs.octopus_server_url }}
         api_Key: ${{ inputs.octopus_api_key }}
